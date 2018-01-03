@@ -1,5 +1,12 @@
 using MarkElide
 using Base.Test
 
-# write your own tests here
-@test 1 == 2
+using MarkElide
+
+f(x) = @mark :a println("hi $x")
+
+println("non elided call:")
+f(2)
+
+println("elided call:")
+@elide :a f(3)
