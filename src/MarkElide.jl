@@ -18,13 +18,19 @@ function ismark_end(ex::Expr)
     ex.args[3] == :end
 end
 
+function mark_begin(s::Symbol)
+    Expr(:meta, :mark, s, :begin)
+end
+function mark_end(s::Symbol)
+    Expr(:meta, :mark, s, :end)
+end
+
 Cassette.@context MarkElideCtx
 function Cassette.getpass(::Type{MarkElideCtx})
     function inner(signature, method_body)::CodeInfo
-        code = method_body.code
         ret = []
         elide = 0
-        for ex in code
+        for ex in method_body.code
             if ismark_begin(ex)
                 elide += 1
             elseif ismark_end(ex)
@@ -37,20 +43,19 @@ function Cassette.getpass(::Type{MarkElideCtx})
             end
         end
         @assert elide == 0
-        ret
+        method_body = deepcopy(method_body)
         method_body.code = code
+        method_body
     end
 end
-
-# package code goes here
 
 macro mark(symbol, code)
     @assert symbol isa QuoteNode
     @assert symbol.value isa Symbol
     Expr(:block,
-         Expr(:meta, :mark, symbol.value, :begin),
+         mark_begin(symbol.value),
          Expr(:(=), :ret, esc(code)),
-         Expr(:meta, :mark, symbol.value, :end),
+         mark_end(symbol.value),
          :ret)
 end
 
